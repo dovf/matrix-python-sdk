@@ -284,18 +284,6 @@ class MatrixClient(object):
         self.rooms[room_id] = Room(self, room_id)
         return self.rooms[room_id]
 
-    def _process_state_event(self, state_event, current_room):
-        if "type" not in state_event:
-            return  # Ignore event
-        etype = state_event["type"]
-
-        if etype == "m.room.name":
-            current_room.name = state_event["content"].get("name", None)
-        elif etype == "m.room.topic":
-            current_room.topic = state_event["content"].get("topic", None)
-        elif etype == "m.room.aliases":
-            current_room.aliases = state_event["content"].get("aliases", None)
-
     def _sync(self, timeout_ms=30000):
         # TODO: Deal with presence
         # TODO: Deal with left rooms
@@ -307,7 +295,7 @@ class MatrixClient(object):
             room = self.rooms[room_id]
 
             for event in sync_room["state"]["events"]:
-                self._process_state_event(event, room)
+                room._process_state_event(event)
 
             for event in sync_room["timeline"]["events"]:
                 room._put_event(event)
@@ -394,6 +382,18 @@ class Room(object):
             callback (func(roomchunk)): Callback called when an event arrives.
         """
         self.listeners.append(callback)
+
+    def _process_state_event(self, state_event):
+        if "type" not in state_event:
+            return  # Ignore event
+        etype = state_event["type"]
+
+        if etype == "m.room.name":
+            self.name = state_event["content"].get("name", None)
+        elif etype == "m.room.topic":
+            self.topic = state_event["content"].get("topic", None)
+        elif etype == "m.room.aliases":
+            self.aliases = state_event["content"].get("aliases", None)
 
     def _put_event(self, event):
         self.events.append(event)
